@@ -11,7 +11,6 @@ class Index extends MyController
 
     public function ha()
     {
-        $this->my();
-        // echo "fine";
+        var_dump($this->gets);
     }
 }
