@@ -9,6 +9,24 @@ class MyModel extends Model
     protected function initialize()
     {
         parent::initialize();
+        $this->db = new \think\db\Query;
+    }
+
+    /**
+     * 手动连接数据库
+     *
+     * @param array  $config 手动设置配置项
+     * @return void
+     */
+    protected function dbConnect($config = [])
+    {
+        // 查询结果类型
+        config('database.result_type', \PDO::FETCH_CLASS);
+        $dbConfig = config('database');
+        if ( ! empty($config)) {
+            $dbConfig = array_merge($dbConfig, $config);
+        }
+        $this->db->connect($dbConfig);
     }
 
     /**
@@ -24,37 +42,24 @@ class MyModel extends Model
 			return 1;
 		}
         $countRes = $itemsNum%$pageLength;
-
         $pageLengthNum = intval($itemsNum/$pageLength);
-
         $pageLengthNum = $countRes > 0 ? $pageLengthNum+1 : $pageLengthNum;
-
-        if ($pageLengthNum === 0) $pageLengthNum = 1;
-
+        if ($pageLengthNum === 0) {
+            $pageLengthNum = 1;
+        }
         return $pageLengthNum;
     }
 
-
-    /**
-     * 数据库选择表
+   /**
+     * 数据库动态对象查询
      * 
-     * @param string $table 数据表
-     * @return source
-     */
-    public function from($table)
-    {
-        return Db::table($table);
-    }
-
-    /**
-     * 数据库选择表
-     * 
-     * @param string $table 数据表
+     * @param string $method 请求方法
+     * @param string $args 参数
      * @return source
      */
     public function __call($method, $args)
     {
-        return Db::$method($args[0]);
+        return $this->db->$method($args[0]);
     }
 
 

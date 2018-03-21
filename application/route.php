@@ -10,7 +10,7 @@
 // +----------------------------------------------------------------------
 
 use think\Route;
-Route::bind('court');
+Route::bind('home');
 return [ '__pattern__' => [
         'name' => '\w+',
     ],
