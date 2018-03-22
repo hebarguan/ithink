@@ -110,7 +110,6 @@ class MyController extends Controller
         return $returnData;
     }
 
-
     /**
      * 检测输入参数是否存在或空值
      *
@@ -160,7 +159,7 @@ class MyController extends Controller
             // 检测参数是否被定义
             $paramName = explode('|', $rulesBlock[0])[0];
             if ( ! isset($input[$paramName])) {
-                return $this->resError(1002);
+                $this->resError(1002);
             } else {
                 $returnResult[$paramName] = $input[$paramName];
             }
@@ -169,12 +168,12 @@ class MyController extends Controller
         if ( ! empty($validRules)) {
             $validate = new \think\Validate($validRules);
             if (! $validate->check($input)) {
-                return $this->resError(-1, $validate->getError());
+                $this->resError($validate->getError());
             }
         }
         return $returnResult;
     }
-
+   
    /**
      * 系统请求错误
      *
@@ -183,37 +182,38 @@ class MyController extends Controller
      * @param boolean $noecho 是否显示提示
      * @return response
      */
-    protected function resError($code = 1001, $errmsg = '', $noecho = false)
+    protected function resError($errmsg = 1001, $httpCode = 400, $noecho = false)
     {
         if (true !== $noecho) {
             $errResult = require(APP_PATH.'error/Sys.php');
             $resError['code']  = -1;
             // 错误提示
-            if ($errmsg) {
+            if (! is_numeric($errmsg)) {
                 $resError['errmsg']  = $errmsg;
             } else {
-                $resError['errmsg']  = $errResult[$code];
+                $resError['errmsg']  = $errResult[$errmsg];
             }
             // 调试模式下开启错误日志写入
             if (config('app_debug')) {
                 Log::record("System Error Message >>> ".json_encode($resError, JSON_UNESCAPED_UNICODE));
             }
-            header('Content-Type:application/json');
-            return json_encode($resError, JSON_UNESCAPED_UNICODE);
+            header($this->httpCode($httpCode));
+            header('Content-Type:application/json;charset=utf8');
+            echo json_encode($resError, JSON_UNESCAPED_UNICODE);
+            exit;
         }
     }
 
-         /**
+     /**
      * 请求正确，返回结果
      *
      * @param integer $code 响应码，0表示成功
      * @param string $result 相应结果
-     * @param string $resmsg 请求正确提示
      * @return response
      */
-    protected function resResult($code = 0, $result = '', $resmsg = 'success')
+    protected function resSuccess($result = '', $httpCode = 200, $resmsg = 'success')
     {
-        $response['code'] = $code;
+        $response['code'] = 0;
         $response['resmsg'] = $resmsg;
         if ($result !== '') {
             $response['data'] = $result;
@@ -222,11 +222,13 @@ class MyController extends Controller
             // 错误日志
             Log::record("System Error Message >>> ".json_encode($response, JSON_UNESCAPED_UNICODE));
         }
-        header('Content-Type:application/json');
-        return json_encode($response, JSON_UNESCAPED_UNICODE);
+        header($this->httpCode($httpCode));
+        header('Content-Type:application/json;charset=utf8');
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
-    /**
+     /**
      * 读取错误提示语
      *
      * @param string $codestr 错误码 可以：1001 或者 1001|1002 返回对应错误:系统错误 或者 系统错误|缺少参数
@@ -252,6 +254,47 @@ class MyController extends Controller
         return implode('|', $errmsg);
     }
 
+    /**
+     * 读取头部状态
+     *
+     * @param string $code 状态码
+     * @return void
+     */
+    protected function httpCode($code)
+    {
+        switch ($code)
+        {
+            case '200' :
+                //200 正常状态
+                $httpStatus = 'HTTP/1.1 200 OK';
+                break;
+            case '301' :
+                // 301 永久重定向，记得在后面要加重定向地址 Location:$url
+                $httpStatus = 'HTTP/1.1 301 Moved Permanently';
+                break;
+            case '304' :
+                // 设置页面304 没有修改
+                $httpStatus = 'HTTP/1.1 304 Not Modified';
+                break;
+            case '400' :
+                // 请求错误
+                $httpStatus = 'HTTP/1.1 400 Bad Request';
+                break;
+            case '401' :
+                // 未验证
+                $httpStatus = 'HTTP/1.1 401 Unauthorized';
+                break;
+            case '403' :
+                // 403 禁止访问
+                $httpStatus = 'HTTP/1.1 403 Forbidden';
+                break;
+            case '500' :
+                // 500 服务器错误
+                $httpStatus = 'HTTP/1.1 500 Internal Server Error';
+                break;
+        }
+        return $httpStatus;
+    }
 
     /**
      * 添加URL经典模式:  /home/controller/method?name=hebar&age=24 有效

@@ -26,8 +26,9 @@ class UserModel extends MyModel
         // 手动连接数据库
         $this->dbConnect();
         $this->db->name('user');
-        $pdoQuery = $this->db->where('username', 'jaychou')->select();
-        return $pdoQuery->all();
+        $this->db->field('count(username) as rows');
+        $pdoQuery = $this->db->where('username', 'jaychou')->find();
+        return $pdoQuery;
     }
 
 }
